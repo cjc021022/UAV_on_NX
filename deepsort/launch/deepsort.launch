@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+    <arg name="device"  default="cuda:0"/>
+    <arg name="sort" value="True"/>
+    <arg name="display" value="True"/>
+    <arg name="cpu_or_gpu" value="True"/>
+    <arg name="query_features" value="/home/lenovo/some_test/yolov8_deepsort_ros_ws/src/deepsort/src/fast_reid/query/query_features.npy"/>
+    <arg name="name" value="/home/lenovo/some_test/yolov8_deepsort_ros_ws/src/deepsort/src/fast_reid/query/names.npy"/>
+    <arg name="image_size" default="640"/>
+    <arg name="image_topic" value="/camera_front/rgb/image_raw"/>
+    <arg name="detect_result_topic" default="/yolov8/BoundingBoxes"/>       
+    
+
+    <node pkg="deepsort" type="person_search_reid.py" name="deepsort" output="screen">
+        <param name="device" value="$(arg device)"/>
+        <param name="sort" value="$(arg sort)"/>
+        <param name="display" value="$(arg display)"/>
+        <param name="cpu_or_gpu" value="$(arg cpu_or_gpu)"/>
+        <param name="query_features" value="$(arg query_features)"/>
+        <param name="name" value="$(arg name)"/>
+        <param name="img_size" value="$(arg image_size)"/>
+        <param name="image_topic" value="$(arg image_topic)"/>
+        <param name="detect_result_topic" value="$(arg detect_result_topic)"/>
+    </node>
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+</launch>
