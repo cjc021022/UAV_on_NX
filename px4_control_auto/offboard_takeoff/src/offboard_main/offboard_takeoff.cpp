@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
     bool success = offboard_takeoff.takeoff();
     OffboardControl::position_hover position_hover(nh);
     if(success){
-        position_hover.moveToPosition(0,0,1.5);
+        position_hover.moveToPosition(0,0,1);
     }
     ros::spin();
     return 0;

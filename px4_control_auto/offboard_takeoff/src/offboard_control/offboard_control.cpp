@@ -25,7 +25,9 @@ namespace OffboardControl {
         // init the target position, before set_mode_'OFFBOARD'& arm UAV  maybe the value(0,0,1.5)
         initial_pose_.pose.position.x = 0;
         initial_pose_.pose.position.y = 0;
-        initial_pose_.pose.position.z = 1.5;        
+        initial_pose_.pose.position.z = 1;
+        initial_pose_.pose.orientation.w = 0.707;
+        initial_pose_.pose.orientation.z = 0.707;
         for(int i = 50; ros::ok() && i > 0; --i){
             pose_init_pub_.publish(initial_pose_);
             ros::spinOnce();
