@@ -2,7 +2,6 @@
 '''
 by jiucheng.chen 2024.04.09
 '''
-# 导入依赖
 import random
 from utils.torch_utils import select_device, load_classifier, time_sync
 from utils.general import (
@@ -11,6 +10,7 @@ from utils.general import (
 from utils.datasets import LoadStreams, LoadImages, letterbox
 from models.experimental import attempt_load
 import torch.backends.cudnn as cudnn
+from include.one_object_element import one_Object_Element
 import torch
 import torchvision
 import pyrealsense2 as rs
@@ -21,11 +21,17 @@ import os
 import time
 import numpy as np
 import sys
-
 import cv2
 # PyTorch
 # YoloV5-PyTorch
-
+interest_class_dict = {
+    0 : 'person',
+    64 : 'mouse',
+    67 : 'cell phone',
+    66 : 'keyboard',
+    41 : 'cup',
+    73 : ' book'
+}
 pipeline = rs.pipeline()  # 定义流程pipeline
 config = rs.config()  # 定义配置config
 config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
@@ -154,33 +160,25 @@ class YoloV5:
         # 获取检测结果
         det = pred[0]
         gain_whwh = torch.tensor(img.shape)[[1, 0, 1, 0]]  # [w, h, w, h]
-
-        if view_img and canvas is None:
-            canvas = np.copy(img)
         xyxy_list = []
         conf_list = []
         class_id_list = []
-        interest_class = ['person', 'mouse', 'cell phone', 'keyboard', 'cup', 'book']
+        for i in range(len(self.yolov5['class_name'])):
+            print(f"{self.yolov5['class_name'][i]}====={i}")
         # 画面中存在目标对象
         if det is not None and len(det):
-            # 过滤掉其他类别，只针对选定类别
             # 将坐标信息恢复到原始图像的尺寸
             det[:, :4] = scale_coords(
                 img_resize.shape[2:], det[:, :4], img.shape).round()
             for *xyxy, conf, class_id in reversed(det):
                 class_id = int(class_id)
-                if self.yolov5['class_name'][class_id] in interest_class:
+                # 过滤掉其他类别，只针对选定类别
+                if class_id in interest_class_dict:
                     xyxy_list.append(xyxy)
                     conf_list.append(conf)
                     class_id_list.append(class_id)
-                    if view_img:
-                        # 绘制矩形框与标签
-                        # print(f"====class name : {self.yolov5['class_name']}, class id : {class_id}===")
-                        label = '%s %.2f' % (
-                            self.yolov5['class_name'][class_id], conf)
-                        self.plot_one_box(
-                            xyxy, canvas, label=label, color=self.colors[class_id], line_thickness=3)
-        return canvas, class_id_list, xyxy_list, conf_list
+                    print(f"识别种类：{self.yolov5['class_name'][class_id]}, id:{class_id}")
+        return class_id_list, xyxy_list, conf_list                    
 
     def plot_one_box(self, x, img, color=None, label=None, line_thickness=None):
         ''''绘制矩形框+标签'''
@@ -216,49 +214,34 @@ if __name__ == '__main__':
             # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
             depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(
                 depth_image, alpha=0.03), cv2.COLORMAP_JET)
-            # Stack both images horizontally
-            images = np.hstack((color_image, depth_colormap))
-            
-            # Show images
 
             t_start = time.time()  # 开始计时
             # YoloV5 目标检测
-            canvas, class_id_list, xyxy_list, conf_list = model.detect(
+            class_id_list, xyxy_list, conf_list = model.detect(
                 color_image)
 
             t_end = time.time()  # 结束计时\
-            #canvas = np.hstack((canvas, depth_colormap))
-            #print(class_id_list)
-
             camera_xyz_list=[]
             if xyxy_list:
                 for i in range(len(xyxy_list)):
-                    ux = int((xyxy_list[i][0]+xyxy_list[i][2])/2)  # 计算像素坐标系的x
-                    uy = int((xyxy_list[i][1]+xyxy_list[i][3])/2)  # 计算像素坐标系的y
+                    ux = int((xyxy_list[i][0] + xyxy_list[i][2]) / 2)  # 计算像素坐标系的x
+                    uy = int((xyxy_list[i][1] + xyxy_list[i][3]) / 2)  # 计算像素坐标系的y
                     dis = aligned_depth_frame.get_distance(ux, uy)
-                    camera_xyz = rs.rs2_deproject_pixel_to_point(
-                        depth_intrin, (ux, uy), dis)  # 计算相机坐标系的xyz
+                    camera_xyz = rs.rs2_deproject_pixel_to_point(depth_intrin, (ux, uy), dis)  # 计算相机坐标系的xyz
                     camera_xyz = np.round(np.array(camera_xyz), 3)  # 转成3位小数
                     camera_xyz = camera_xyz.tolist()
-                    cv2.circle(canvas, (ux,uy), 4, (255, 255, 255), 5)#标出中心点
-                    cv2.putText(canvas, str(camera_xyz), (ux+20, uy+10), 0, 1,
-                                [225, 255, 255], thickness=2, lineType=cv2.LINE_AA)#标出坐标
                     camera_xyz_list.append(camera_xyz)
-            #print(camera_xyz_list)
 
-            # 添加fps显示
+            # 计算fps
             fps = int(1.0 / (t_end - t_start))
-            cv2.putText(canvas, text="FPS: {}".format(fps), org=(50, 50),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, thickness=2,
-                        lineType=cv2.LINE_AA, color=(0, 0, 0))
-            cv2.namedWindow('detection', flags=cv2.WINDOW_NORMAL |
-                            cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
-            cv2.imshow('detection', canvas)
-            key = cv2.waitKey(1)
-            # Press esc or 'q' to close the image window
-            if key & 0xFF == ord('q') or key == 27:
-                cv2.destroyAllWindows()
-                break
+            print(f"当前帧率：{fps} FPS")
+            # 打印检测结果到终端
+            print("检测结果：")
+            for one_class in range(len(class_id_list)):
+                class_name = interest_class_dict[class_id_list[one_class]]
+                conf = conf_list[one_class]
+                xyz = camera_xyz_list[one_class]
+                print(f"类别：{class_name}, 置信度：{conf:.2f}, 位置和距离：{xyz}")
     finally:
         # Stop streaming
         pipeline.stop()
