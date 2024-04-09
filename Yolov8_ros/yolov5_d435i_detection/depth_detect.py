@@ -107,8 +107,7 @@ class YoloV5:
             (1, 3, self.yolov5['input_size'], self.yolov5['input_size']), device=device)  # init img
         # 创建模型
         # run once
-        _ = model(img_torch.half()
-                  if is_half else img) if device.type != 'cpu' else None
+        _ = model(img_torch.half() if is_half else img_torch) if device.type != 'cpu' else None
         self.is_half = is_half  # 是否开启半精度
         self.device = device  # 计算设备
         self.model = model  # Yolov5模型
@@ -163,8 +162,6 @@ class YoloV5:
         xyxy_list = []
         conf_list = []
         class_id_list = []
-        for i in range(len(self.yolov5['class_name'])):
-            print(f"{self.yolov5['class_name'][i]}====={i}")
         # 画面中存在目标对象
         if det is not None and len(det):
             # 将坐标信息恢复到原始图像的尺寸
@@ -177,25 +174,7 @@ class YoloV5:
                     xyxy_list.append(xyxy)
                     conf_list.append(conf)
                     class_id_list.append(class_id)
-                    print(f"识别种类：{self.yolov5['class_name'][class_id]}, id:{class_id}")
         return class_id_list, xyxy_list, conf_list                    
-
-    def plot_one_box(self, x, img, color=None, label=None, line_thickness=None):
-        ''''绘制矩形框+标签'''
-        tl = line_thickness or round(
-            0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
-        color = color or [random.randint(0, 255) for _ in range(3)]
-        c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
-        cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
-        if label:
-            tf = max(tl - 1, 1)  # font thickness
-            t_size = cv2.getTextSize(
-                label, 0, fontScale=tl / 3, thickness=tf)[0]
-            c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-            cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
-            cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3,
-                        [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
-
 
 if __name__ == '__main__':
     print("[INFO] YoloV5目标检测-程序启动")
