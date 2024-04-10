@@ -1,4 +1,4 @@
-#!~/miniconda3/envs/yolo_depth_detect/bin/python
+#! ~/miniconda3/envs/yolo_depth_detect/bin/python
 '''
 by jiucheng.chen 2024.04.09
 '''
@@ -143,17 +143,13 @@ class YoloV5:
         if self.img_torch.ndimension() == 3:
             self.img_torch = self.img_torch.unsqueeze(0)
         # 模型推理
-        t1 = time_sync()
         pred = self.model(self.img_torch, augment=False)[0]
         # pred = self.model_trt(self.img_torch, augment=False)[0]
         # NMS 非极大值抑制
         pred = non_max_suppression(pred, self.yolov5['threshold']['confidence'],
                                    self.yolov5['threshold']['iou'], classes=None, agnostic=False)
-        t2 = time_sync()
-        # print("推理时间: inference period = {}".format(t2 - t1))
         # 获取检测结果
         det = pred[0]
-        gain_whwh = torch.tensor(img.shape)[[1, 0, 1, 0]]  # [w, h, w, h]
         object_list = []
         # 画面中存在目标对象
         if det is not None and len(det):
@@ -187,7 +183,7 @@ if __name__ == '__main__':
             intr, depth_intrin, color_image, aligned_depth_frame = get_aligned_images()  # 获取对齐的图像与相机内参
             if not color_image.any():
                 continue
-            t_start = time.time()  # 开始计时
+            t_start = time.time()
             # YoloV5 目标检测
             object_list = model.detect(color_image)
             if object_list is None or len(object_list) == 0:
@@ -202,7 +198,7 @@ if __name__ == '__main__':
                 print(f"confidence : {conf}")
                 print(f"position : {body_position}")
                 print(f"-----")
-            t_end = time.time()  # 结束计时\
+            t_end = time.time()
             fps = int(1.0 / (t_end - t_start))
             print(f"FPS : {fps}")
 

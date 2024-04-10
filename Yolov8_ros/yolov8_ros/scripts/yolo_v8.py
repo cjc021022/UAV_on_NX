@@ -1,4 +1,4 @@
-#!~/miniconda3/envs/py_cv/bin/python
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import cv2
@@ -83,11 +83,12 @@ class Yolo_Dect:
         print(str(results[0].speed['inference']))
         fps = 1000.0/ results[0].speed['inference']
         #cv2.putText(self.frame, f'FPS: {int(fps)}', (20,50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
-
+        rospy.loginfo(results[0].boxes)
+        rospy.loginfo("xxxxx")
         for result in results[0].boxes:
             boundingBox = BoundingBox()
-            #rospy.loginfo(result)
-            #rospy.loginfo(results[0].names[result.cls.item()])
+            rospy.loginfo(result)
+            # rospy.loginfo(results[0].names[result.cls.item()])
             if(results[0].names[result.cls.item()]=='person'):
                 boundingBox.xmin = np.int64(result.xyxy[0][0].item())
                 boundingBox.ymin = np.int64(result.xyxy[0][1].item())
