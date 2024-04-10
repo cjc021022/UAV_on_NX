@@ -18,42 +18,24 @@ class Yolo_Dect:
 
         # load parameters
         weight_path = rospy.get_param('~weight_path', '')
-        image_topic = rospy.get_param(
-            '~image_topic', '/camera/aligned_depth_to_color/image_raw')
         pub_topic = rospy.get_param('~pub_topic', '/yolov8/BoundingBoxes')
         self.camera_frame = rospy.get_param('~camera_frame', '')
         conf = rospy.get_param('~conf', '0.5')
         self.visualize = rospy.get_param('~visualize', 'True')
-        self.depth_image_width=rospy.get_param('depth_image_width','')
-        self.depth_image_height=rospy.get_param('depth_image_height','')
-
         # which device will be used
         if (rospy.get_param('/use_cpu', 'false')):
             self.device = 'cpu'
         else:
             self.device = 'cuda'
-
         self.model = YOLO(weight_path)
         self.model.fuse()
-
         self.model.conf = conf
         self.color_image = Image()
         self.getImageStatus = False
-
-        # Load class color
-        self.classes_colors = {}
-
-        # image subscribe
-        self.color_sub = rospy.Subscriber(image_topic, Image, self.image_callback,
-                                          queue_size=1, buff_size=52428800)
-        # depth image subscrib
-        self.depth_image_sub = rospy.Subscriber(image_topic, Image, self.depth_image_callback, queue_size=1)
         # output publishers
-        self.position_pub = rospy.Publisher(
-            pub_topic,  BoundingBoxes, queue_size=1)
+        self.position_pub = rospy.Publisher(pub_topic,  BoundingBoxes, queue_size=1)
 
-        self.image_pub = rospy.Publisher(
-            '/yolov8/detection_image',  Image, queue_size=1)
+        self.image_pub = rospy.Publisher('/yolov8/detection_image',  Image, queue_size=1)
 
         # if no image messages
         while (not self.getImageStatus):
@@ -73,12 +55,7 @@ class Yolo_Dect:
         results = self.model.predict(self.color_image, show=False, conf=0.7)
         self.dectshow(results, image.height, image.width)
         cv2.waitKey(3)
-
-    def depth_image_callback(self, depth_image):
-        depth_image_cv = self.bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough')
-
     def dectshow(self, results, height, width):
-
         self.frame = results[0].plot()
         # print(type(self.frame))
         print(str(results[0].speed['inference']))

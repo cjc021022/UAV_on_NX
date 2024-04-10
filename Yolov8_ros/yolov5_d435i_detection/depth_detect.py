@@ -25,7 +25,7 @@ import cv2
 # PyTorch
 # YoloV5-PyTorch
 interest_class_dict = {
-    0 : 'person',
+    0  : 'person',
     64 : 'mouse',
     67 : 'cell phone',
     66 : 'keyboard',
@@ -61,15 +61,10 @@ def get_aligned_images():
     # with open('./intrinsics.json', 'w') as fp:
     #json.dump(camera_parameters, fp)
     #######################################################
-
-    depth_image = np.asanyarray(aligned_depth_frame.get_data())  # 深度图（默认16位）
-    depth_image_8bit = cv2.convertScaleAbs(depth_image, alpha=0.03)  # 深度图（8位）
-    depth_image_3d = np.dstack(
-        (depth_image_8bit, depth_image_8bit, depth_image_8bit))  # 3通道深度图
     color_image = np.asanyarray(color_frame.get_data())  # RGB图
 
     # 返回相机内参、深度参数、彩色图、深度图、齐帧中的depth帧
-    return intr, depth_intrin, color_image, depth_image, aligned_depth_frame
+    return intr, depth_intrin, color_image, aligned_depth_frame
 
 
 class YoloV5:
@@ -159,9 +154,7 @@ class YoloV5:
         # 获取检测结果
         det = pred[0]
         gain_whwh = torch.tensor(img.shape)[[1, 0, 1, 0]]  # [w, h, w, h]
-        xyxy_list = []
-        conf_list = []
-        class_id_list = []
+        object_list = []
         # 画面中存在目标对象
         if det is not None and len(det):
             # 将坐标信息恢复到原始图像的尺寸
@@ -171,10 +164,15 @@ class YoloV5:
                 class_id = int(class_id)
                 # 过滤掉其他类别，只针对选定类别
                 if class_id in interest_class_dict:
-                    xyxy_list.append(xyxy)
-                    conf_list.append(conf)
-                    class_id_list.append(class_id)
-        return class_id_list, xyxy_list, conf_list                    
+                    one_object = one_Object_Element(class_id, conf)
+                    one_object.class_name = interest_class_dict[class_id]
+                    one_corner_position = []
+                    another_corner_position = []
+                    one_corner_position.extend((xyxy[0], xyxy[1]))
+                    another_corner_position.extend((xyxy[2], xyxy[3]))
+                    one_object.corner_points.extend((one_corner_position, another_corner_position))
+                    object_list.append(one_object)
+        return object_list                    
 
 if __name__ == '__main__':
     print("[INFO] YoloV5目标检测-程序启动")
@@ -186,41 +184,28 @@ if __name__ == '__main__':
     try:
         while True:
             # Wait for a coherent pair of frames: depth and color
-            intr, depth_intrin, color_image, depth_image, aligned_depth_frame = get_aligned_images()  # 获取对齐的图像与相机内参
-            if not depth_image.any() or not color_image.any():
+            intr, depth_intrin, color_image, aligned_depth_frame = get_aligned_images()  # 获取对齐的图像与相机内参
+            if not color_image.any():
                 continue
-            # Convert images to numpy arrays
-            # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(
-                depth_image, alpha=0.03), cv2.COLORMAP_JET)
-
             t_start = time.time()  # 开始计时
             # YoloV5 目标检测
-            class_id_list, xyxy_list, conf_list = model.detect(
-                color_image)
-
+            object_list = model.detect(color_image)
+            if object_list is None or len(object_list) == 0:
+                continue
+            print(f"This frame is detected, and result is below:")
+            for one_object in object_list:
+                one_object.uv_trans_to_body(aligned_depth_frame, depth_intrin)
+                class_name = one_object.class_name
+                conf = one_object.confidence
+                body_position = one_object.body_position
+                print(f"Class : {class_name}")
+                print(f"confidence : {conf}")
+                print(f"position : {body_position}")
+                print(f"-----")
             t_end = time.time()  # 结束计时\
-            camera_xyz_list=[]
-            if xyxy_list:
-                for i in range(len(xyxy_list)):
-                    ux = int((xyxy_list[i][0] + xyxy_list[i][2]) / 2)  # 计算像素坐标系的x
-                    uy = int((xyxy_list[i][1] + xyxy_list[i][3]) / 2)  # 计算像素坐标系的y
-                    dis = aligned_depth_frame.get_distance(ux, uy)
-                    camera_xyz = rs.rs2_deproject_pixel_to_point(depth_intrin, (ux, uy), dis)  # 计算相机坐标系的xyz
-                    camera_xyz = np.round(np.array(camera_xyz), 3)  # 转成3位小数
-                    camera_xyz = camera_xyz.tolist()
-                    camera_xyz_list.append(camera_xyz)
-
-            # 计算fps
             fps = int(1.0 / (t_end - t_start))
-            print(f"当前帧率：{fps} FPS")
-            # 打印检测结果到终端
-            print("检测结果：")
-            for one_class in range(len(class_id_list)):
-                class_name = interest_class_dict[class_id_list[one_class]]
-                conf = conf_list[one_class]
-                xyz = camera_xyz_list[one_class]
-                print(f"类别：{class_name}, 置信度：{conf:.2f}, 位置和距离：{xyz}")
+            print(f"FPS : {fps}")
+
     finally:
         # Stop streaming
         pipeline.stop()
