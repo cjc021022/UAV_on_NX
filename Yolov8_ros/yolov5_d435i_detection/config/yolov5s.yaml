@@ -1,6 +1,6 @@
 ####################################
 # YoloV5模型权重路径
-weight:  "weights/yolov5s.pt"
+weight:  "weights/yolov5n.pt"
 # 输入图像的尺寸
 input_size: 640
 # 类别个数

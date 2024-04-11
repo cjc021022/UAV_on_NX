@@ -6,7 +6,7 @@ import torch
 import rospy
 import numpy as np
 from ultralytics import YOLO
-from time import time
+import time
 
 from std_msgs.msg import Header
 from sensor_msgs.msg import Image
@@ -77,7 +77,7 @@ class Yolo_Dect:
         cv2.waitKey(3)
 
     def dectshow(self, results, height, width):
-
+        t_start = time.time()
         self.frame = results[0].plot()
         # print(type(self.frame))
         print(str(results[0].speed['inference']))
@@ -87,23 +87,30 @@ class Yolo_Dect:
         rospy.loginfo("xxxxx")
         for result in results[0].boxes:
             boundingBox = BoundingBox()
-            rospy.loginfo(result)
+            # rospy.loginfo(result)
             # rospy.loginfo(results[0].names[result.cls.item()])
-            if(results[0].names[result.cls.item()]=='person'):
-                boundingBox.xmin = np.int64(result.xyxy[0][0].item())
-                boundingBox.ymin = np.int64(result.xyxy[0][1].item())
-                boundingBox.xmax = np.int64(result.xyxy[0][2].item())
-                boundingBox.ymax = np.int64(result.xyxy[0][3].item())
-                boundingBox.Class = results[0].names[result.cls.item()]
-                boundingBox.probability = result.conf.item()
-                boundingBox.xywh.append(np.int64(result.xywhn[0][0].item()*640))
-                boundingBox.xywh.append(np.int64(result.xywhn[0][1].item()*480))
-                boundingBox.xywh.append(np.int64(result.xywhn[0][2].item()*640))
-                boundingBox.xywh.append(np.int64(result.xywhn[0][3].item()*480))
-                self.boundingBoxes.bounding_boxes.append(boundingBox)
+            # if(results[0].names[result.cls.item()]=='person'):
+            print(f"class : {results[0].names[result.cls.item()]}")
+            print(f"class_id : {result.cls.item()}")
+            
+            boundingBox.xmin = np.int64(result.xyxy[0][0].item())
+            boundingBox.ymin = np.int64(result.xyxy[0][1].item())
+            boundingBox.xmax = np.int64(result.xyxy[0][2].item())
+            boundingBox.ymax = np.int64(result.xyxy[0][3].item())
+            boundingBox.Class = results[0].names[result.cls.item()]
+            boundingBox.probability = result.conf.item()
+            boundingBox.xywh.append(np.int64(result.xywhn[0][0].item()*640))
+            boundingBox.xywh.append(np.int64(result.xywhn[0][1].item()*480))
+            boundingBox.xywh.append(np.int64(result.xywhn[0][2].item()*640))
+            boundingBox.xywh.append(np.int64(result.xywhn[0][3].item()*480))
+            print(f"position : {boundingBox}")
+            self.boundingBoxes.bounding_boxes.append(boundingBox)
         self.position_pub.publish(self.boundingBoxes)
         self.publish_image(self.frame, height, width)
-
+        t_end = time.time()
+        fps = int(1.0 / (t_end - t_start))
+        
+        print(f"FPS : {fps}")        
         if self.visualize :
             cv2.imshow('YOLOv8', self.frame)
 

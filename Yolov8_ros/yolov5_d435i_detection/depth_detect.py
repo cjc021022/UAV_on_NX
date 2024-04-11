@@ -24,6 +24,7 @@ import sys
 import cv2
 # PyTorch
 # YoloV5-PyTorch
+interest_class_list = [0, 64, 66, 67, 41, 73]
 interest_class_dict = {
     0  : 'person',
     64 : 'mouse',
@@ -147,7 +148,7 @@ class YoloV5:
         # pred = self.model_trt(self.img_torch, augment=False)[0]
         # NMS 非极大值抑制
         pred = non_max_suppression(pred, self.yolov5['threshold']['confidence'],
-                                   self.yolov5['threshold']['iou'], classes=None, agnostic=False)
+                                   self.yolov5['threshold']['iou'], classes=interest_class_list, agnostic=False)
         # 获取检测结果
         det = pred[0]
         object_list = []
@@ -158,16 +159,14 @@ class YoloV5:
                 img_resize.shape[2:], det[:, :4], img.shape).round()
             for *xyxy, conf, class_id in reversed(det):
                 class_id = int(class_id)
-                # 过滤掉其他类别，只针对选定类别
-                if class_id in interest_class_dict:
-                    one_object = one_Object_Element(class_id, conf)
-                    one_object.class_name = interest_class_dict[class_id]
-                    one_corner_position = []
-                    another_corner_position = []
-                    one_corner_position.extend((xyxy[0], xyxy[1]))
-                    another_corner_position.extend((xyxy[2], xyxy[3]))
-                    one_object.corner_points.extend((one_corner_position, another_corner_position))
-                    object_list.append(one_object)
+                one_object = one_Object_Element(class_id, conf)
+                one_object.class_name = interest_class_dict[class_id]
+                one_corner_position = []
+                another_corner_position = []
+                one_corner_position.extend((xyxy[0], xyxy[1]))
+                another_corner_position.extend((xyxy[2], xyxy[3]))
+                one_object.corner_points.extend((one_corner_position, another_corner_position))
+                object_list.append(one_object)
         return object_list                    
 
 if __name__ == '__main__':
