@@ -82,8 +82,9 @@ class Yolo_Dect:
 
     @torch.no_grad()
     def detect(self, color_image):
+        t_start = time.time()
         img_resize = self.preprocess(color_image)
-        results = self.model.predict(self.img_torch, half=self.is_half, classes=interest_class_list, show=False, agnostic_nms=True, conf=0.7)
+        results = self.model.predict(self.img_torch, half=self.is_half, classes=interest_class_list, show=False, agnostic_nms=True, conf=0.7)      
         another_result = results[0].boxes.xyxy.clone()
         another_result = scale_boxes(img_resize.shape[2:], another_result, color_image.shape, ratio_pad=None)
         object_list = []
@@ -99,7 +100,10 @@ class Yolo_Dect:
                 another_corner_position.extend((another_result[index][2], another_result[index][3]))
                 one_object.corner_points.extend((one_corner_position, another_corner_position))
                 object_list.append(one_object)   
-                index += 1        
+                index += 1    
+        t_end = time.time()
+        fps = int(1.0 / (t_end - t_start))
+        rospy.loginfo("FPS : %d", fps)                            
         return object_list  
 
     def publish_image(self, imgdata, height, width):
@@ -138,6 +142,11 @@ def get_aligned_images():
     # 返回相机内参、深度参数、彩色图、深度图、齐帧中的depth帧
     return depth_intrin, color_image, aligned_depth_frame
 
+def shutdown_node():
+    pipeline.stop()
+    rospy.loginfo("Shutting down the node...")
+    rospy.signal_shutdown("Node shutting down")
+
 def main():
     rospy.init_node('yolov8_ros', anonymous=True)
     rospy.loginfo("initial the Model of YOLOv8....")
@@ -152,23 +161,23 @@ def main():
             object_list = yolo_detect.detect(color_image) 
             if object_list is None or len(object_list) == 0:
                 continue
-            print(f"This frame is detected, and result is below:")
+            rospy.loginfo(f"This frame is detected, and result is below:")
             for one_object in object_list:
                 one_object.uv_trans_to_body(aligned_depth_frame, depth_intrin)
                 class_name = one_object.class_name
                 conf = one_object.confidence
                 body_position = one_object.body_position
-                print(f"Class : {class_name}")
-                print(f"confidence : {conf}")
-                print(f"position : {body_position}")
-                print(f"-----")
+                rospy.loginfo(f"Class : {class_name}")
+                rospy.loginfo(f"confidence : {conf}")
+                rospy.loginfo(f"position : {body_position}")
+                rospy.loginfo(f"-----")
             t_end = time.time()
             fps = int(1.0 / (t_end - t_start))
-            print(f"FPS : {fps}")
+            rospy.loginfo(f"all process's FPS is : {fps}")
             # rospy.spin() 
     finally:
         # Stop streaming
-        pipeline.stop()
+        rospy.on_shutdown(shutdown_node)
 
 
 if __name__ == "__main__":

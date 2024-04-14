@@ -198,19 +198,19 @@ if __name__ == '__main__':
             object_list = model.detect(color_image)
             if object_list is None or len(object_list) == 0:
                 continue
-            print(f"This frame is detected, and result is below:")
+            rospy.loginfo(f"This frame is detected, and result is below:")
             for one_object in object_list:
                 one_object.uv_trans_to_body(aligned_depth_frame, depth_intrin)
                 class_name = one_object.class_name
                 conf = one_object.confidence
                 body_position = one_object.body_position
-                print(f"Class : {class_name}")
-                print(f"confidence : {conf}")
-                print(f"position : {body_position}")
-                print(f"-----")
+                rospy.loginfo(f"Class : {class_name}")
+                rospy.loginfo(f"confidence : {conf}")
+                rospy.loginfo(f"position : {body_position}")
+                rospy.loginfo(f"-----")
             t_end = time.time()
             fps = int(1.0 / (t_end - t_start))
-            print(f"FPS : {fps}")
+            rospy.loginfo(f"FPS : {fps}")
             rate.sleep()
     finally:
         # Stop streaming

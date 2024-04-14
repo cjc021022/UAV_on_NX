@@ -80,19 +80,14 @@ class Yolo_Dect:
         t_start = time.time()
         self.frame = results[0].plot()
         # print(type(self.frame))
-        print(str(results[0].speed['inference']))
+        # print(str(results[0].speed['inference']))
         fps = 1000.0/ results[0].speed['inference']
-        #cv2.putText(self.frame, f'FPS: {int(fps)}', (20,50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
-        rospy.loginfo(results[0].boxes)
-        rospy.loginfo("xxxxx")
+        cv2.putText(self.frame, f'FPS: {int(fps)}', (20,50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
         for result in results[0].boxes:
             boundingBox = BoundingBox()
             # rospy.loginfo(result)
             # rospy.loginfo(results[0].names[result.cls.item()])
             # if(results[0].names[result.cls.item()]=='person'):
-            print(f"class : {results[0].names[result.cls.item()]}")
-            print(f"class_id : {result.cls.item()}")
-            
             boundingBox.xmin = np.int64(result.xyxy[0][0].item())
             boundingBox.ymin = np.int64(result.xyxy[0][1].item())
             boundingBox.xmax = np.int64(result.xyxy[0][2].item())
@@ -103,14 +98,13 @@ class Yolo_Dect:
             boundingBox.xywh.append(np.int64(result.xywhn[0][1].item()*480))
             boundingBox.xywh.append(np.int64(result.xywhn[0][2].item()*640))
             boundingBox.xywh.append(np.int64(result.xywhn[0][3].item()*480))
-            print(f"position : {boundingBox}")
             self.boundingBoxes.bounding_boxes.append(boundingBox)
         self.position_pub.publish(self.boundingBoxes)
         self.publish_image(self.frame, height, width)
         t_end = time.time()
         fps = int(1.0 / (t_end - t_start))
-        
-        print(f"FPS : {fps}")        
+        rospy.loginfo("FPS : %d", fps)
+        # print(f"FPS : {fps}")        
         if self.visualize :
             cv2.imshow('YOLOv8', self.frame)
 
