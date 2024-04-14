@@ -170,11 +170,10 @@ class YoloV5:
         return object_list                    
 
 if __name__ == '__main__':
-    print("[INFO] YoloV5目标检测-程序启动")
-    print("[INFO] 开始YoloV5模型加载")
+    print("[INFO] Start initial YOLO model...")
     # YOLOV5模型配置文件(YAML格式)的路径 yolov5_yaml_path
     model = YoloV5(yolov5_yaml_path='config/yolov5s.yaml')
-    print("[INFO] 完成YoloV5模型加载")
+    print("[INFO] load YOLOv5 model success!")
 
     try:
         while True:

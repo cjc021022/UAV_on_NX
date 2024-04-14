@@ -14,7 +14,7 @@ class one_Object_Element:
         uy = int((self.corner_points[0][1] + self.corner_points[1][1])/2)
         dis = aligned_depth_frame.get_distance(ux, uy)
         camera_xyz = rs.rs2_deproject_pixel_to_point(depth_intrin, (ux, uy), dis)  # 计算相机坐标系的xyz
-        camera_xyz = np.round(np.array(camera_xyz), 3)  # 转成3位小数
+        camera_xyz = np.round(np.array(camera_xyz), 3)
         camera_xyz = camera_xyz.tolist()
         self.body_position = camera_xyz
     
