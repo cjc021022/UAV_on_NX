@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="yolo_depth_detect" type="depth_detect.py" name="test_import" output="screen">
+    <!-- <env name="PYTHONPATH" value="/home/nx/miniconda3/envs/yolo_depth_detect/lib/python3.8/site-packages:/opt/ros/noetic/lib/python3/dist-packages:$PYTHONPATH"/> -->
+  </node>
+</launch>
