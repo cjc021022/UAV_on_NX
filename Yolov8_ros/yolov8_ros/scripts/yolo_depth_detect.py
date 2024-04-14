@@ -92,7 +92,7 @@ class Yolo_Dect:
         if results is not None:
             for result in results[0].boxes:
                 class_id = int(result.cls.item())
-                one_object = one_Object_Element(result.cls.item, result.conf.item())
+                one_object = one_Object_Element(class_id, result.conf.item())
                 one_object.class_name = interest_class_dict[result.cls.item()]
                 one_corner_position = []
                 another_corner_position = []
