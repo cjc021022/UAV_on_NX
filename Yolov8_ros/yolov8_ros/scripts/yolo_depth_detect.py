@@ -68,7 +68,8 @@ class Yolo_Dect:
         self.color_image = Image()
     
     def preprocess(self, color_image):
-        img_resize = cv2.resize(color_image, (640, 640))
+        # img_resize = cv2.resize(color_image, (640, 640))
+        img_resize = color_image
         img_resize = img_resize[:, :, ::-1]
         img_resize = np.expand_dims(img_resize, axis=0)
         img_resize = img_resize.transpose(0, 3, 1, 2)
@@ -85,11 +86,12 @@ class Yolo_Dect:
     def detect(self, color_image):
         img_resize = self.preprocess(color_image)
         t_start = time.time()
-        results = self.model.predict(self.img_torch, half=self.is_half, classes=interest_class_list, show=True, agnostic_nms=True, conf=0.7)      
+        results = self.model.predict(self.img_torch, half=self.is_half, classes=interest_class_list, show=False, agnostic_nms=True, conf=0.7)      
         another_result = results[0].boxes.xyxy.clone()
-        another_result = scale_boxes(img_resize.shape[2:], another_result, color_image.shape, ratio_pad=None)
+        # another_result = scale_boxes(img_resize.shape[2:], another_result, color_image.shape, ratio_pad=None)
         object_list = []
         index = 0
+        rospy.loginfo(f"result is {results[0].boxes.data.tolist()[0]}, another is {another_result[0]}")
         if results is not None:
             for result in results[0].boxes:
                 class_id = int(result.cls.item())
@@ -165,10 +167,10 @@ def main():
                     ltrb[1]), int(ltrb[2]), int(ltrb[3])
                 rospy.loginfo(f"box position is {[xmin, ymin, xmax, ymax]}")
                 # draw the bounding box and the track id
-                cv2.rectangle(color_image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
-                cv2.rectangle(color_image, (xmin, ymin - 20), (xmin + 20, ymin), (0, 255, 0), -1)
-                cv2.putText(color_image, str(track_id), (xmin + 5, ymin - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)       
-            cv2.imshow("Frame", color_image)     
+            #     cv2.rectangle(color_image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+            #     cv2.rectangle(color_image, (xmin, ymin - 20), (xmin + 20, ymin), (0, 255, 0), -1)
+            #     cv2.putText(color_image, str(track_id), (xmin + 5, ymin - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)       
+            # cv2.imshow("Frame", color_image)     
             rospy.loginfo(f"This frame is detected, and result is below:")
             # for one_object in object_list:
             #     one_object.uv_trans_to_body(aligned_depth_frame, depth_intrin)
