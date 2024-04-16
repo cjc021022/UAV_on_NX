@@ -20,7 +20,6 @@ class Yolo_Dect:
             '~image_topic', '/camera/color/image_raw')
         self.camera_frame = rospy.get_param('~camera_frame', '')
         conf = rospy.get_param('~conf', '0.5')
-        self.visualize = rospy.get_param('~visualize', 'True')
         self.depth_image_width=rospy.get_param('depth_image_width','')
         self.depth_image_height=rospy.get_param('depth_image_height','')
 
@@ -38,7 +37,7 @@ class Yolo_Dect:
         self.model.conf = conf
         self.color_image = Image()
         self.getImageStatus = False
-        self.tracker = DeepSort(max_age=20)
+        self.tracker = DeepSort(max_age=50)
         # image subscribe
         self.color_sub = rospy.Subscriber(image_topic, Image, self.image_callback,
                                           queue_size=1, buff_size=52428800)
@@ -60,10 +59,7 @@ class Yolo_Dect:
         if img_torch.ndimension() == 3:
             img_torch = img_torch.unsqueeze(0)        
         results = self.model.predict(img_torch, half=self.is_half, classes=interest_class_list, show=False, conf=0.7)
-
         self.dectshow(results, image.height, image.width)
-
-        # cv2.waitKey(3)
 
     def dectshow(self, results, height, width):
         t_start = datetime.datetime.now()
@@ -80,15 +76,11 @@ class Yolo_Dect:
                 continue
             track_id = track.track_id
             ltrb = track.to_ltrb()
-            xmin, ymin, xmax, ymax = int(ltrb[0]), int(
-                ltrb[1]), int(ltrb[2]), int(ltrb[3])
+            xmin, ymin, xmax, ymax = int(ltrb[0]), int(ltrb[1]), int(ltrb[2]), int(ltrb[3])
             rospy.loginfo(f"box position is {[xmin, ymin, xmax, ymax]}")
             rospy.loginfo(f"track id is {track_id}")                 
         t_end = datetime.datetime.now()
         rospy.loginfo(f"FPS : {1 / (t_end - t_start).total_seconds():.2f}")     
-        if self.visualize :
-            cv2.imshow('YOLOv8', self.frame)
-
 
 def main():
     rospy.init_node('yolov8_ros', anonymous=True)

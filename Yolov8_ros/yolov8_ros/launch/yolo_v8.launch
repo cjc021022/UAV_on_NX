@@ -14,7 +14,6 @@
     <param name="image_topic"       value="/camera/color/image_raw" />
     <param name="pub_topic"         value="/yolov8/BoundingBoxes" />
     <param name="camera_frame"       value="/camera/color/image_raw"/>
-    <param name="visualize"       value="false"/>
     <param name="conf"              value="0.5" />
     <param name="depth_image_width"     type="double"         value="640" />
     <param name="depth_image_height"     type="double"         value="480" />
