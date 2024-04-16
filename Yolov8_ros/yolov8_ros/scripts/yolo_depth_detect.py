@@ -10,7 +10,7 @@ import time
 import pyrealsense2 as rs
 from std_msgs.msg import Header
 from sensor_msgs.msg import Image
-from yolov8_ros_msgs.msg import BoundingBox, BoundingBoxes
+from deep_sort_realtime.deepsort_tracker import DeepSort
 
 pipeline = rs.pipeline()  # 定义流程pipeline
 config = rs.config()  # 定义配置config
@@ -19,6 +19,7 @@ config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 profile = pipeline.start(config)  # 流程开始
 align_to = rs.stream.color  # 与color流对齐
 align = rs.align(align_to)
+
 interest_class_list = [0, 64, 66, 67, 41, 73]
 interest_class_dict = {
     0  : 'person',
@@ -82,9 +83,9 @@ class Yolo_Dect:
 
     @torch.no_grad()
     def detect(self, color_image):
-        t_start = time.time()
         img_resize = self.preprocess(color_image)
-        results = self.model.predict(self.img_torch, half=self.is_half, classes=interest_class_list, show=False, agnostic_nms=True, conf=0.7)      
+        t_start = time.time()
+        results = self.model.predict(self.img_torch, half=self.is_half, classes=interest_class_list, show=True, agnostic_nms=True, conf=0.7)      
         another_result = results[0].boxes.xyxy.clone()
         another_result = scale_boxes(img_resize.shape[2:], another_result, color_image.shape, ratio_pad=None)
         object_list = []
@@ -92,31 +93,17 @@ class Yolo_Dect:
         if results is not None:
             for result in results[0].boxes:
                 class_id = int(result.cls.item())
-                one_object = one_Object_Element(class_id, result.conf.item())
-                one_object.class_name = interest_class_dict[result.cls.item()]
-                one_corner_position = []
-                another_corner_position = []
-                one_corner_position.extend((another_result[index][0], another_result[index][1]))
-                another_corner_position.extend((another_result[index][2], another_result[index][3]))
-                one_object.corner_points.extend((one_corner_position, another_corner_position))
-                object_list.append(one_object)   
+                confidence = result.conf.item()
+                one_object = one_Object_Element(class_id, confidence)
+                one_object.class_name = interest_class_dict[class_id]
+                xmin, ymin, xmax, ymax = int(another_result[index][0]), int(another_result[index][1]), int(another_result[index][2]), int(another_result[index][3])
+                # xywh, conf, cls
+                object_list.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, class_id])   
                 index += 1    
         t_end = time.time()
         fps = int(1.0 / (t_end - t_start))
         rospy.loginfo("FPS : %d", fps)                            
         return object_list  
-
-    def publish_image(self, imgdata, height, width):
-        image_temp = Image()
-        header = Header(stamp=rospy.Time.now())
-        header.frame_id = self.camera_frame
-        image_temp.height = height
-        image_temp.width = width
-        image_temp.encoding = 'bgr8'
-        image_temp.data = np.array(imgdata).tobytes()
-        image_temp.header = header
-        image_temp.step = width * 3
-        self.image_pub.publish(image_temp)
 
 def get_aligned_images():
     frames = pipeline.wait_for_frames()  # 等待获取图像帧
@@ -151,6 +138,7 @@ def main():
     rospy.init_node('yolov8_ros', anonymous=True)
     rospy.loginfo("initial the Model of YOLOv8....")
     yolo_detect = Yolo_Dect()  
+    tracker = DeepSort(max_age=15)
     rospy.loginfo("YOLO model load success")
     try:
         while not rospy.is_shutdown():
@@ -161,16 +149,36 @@ def main():
             object_list = yolo_detect.detect(color_image) 
             if object_list is None or len(object_list) == 0:
                 continue
+            # update the tracker with the new detections
+            tracks = tracker.update_tracks(object_list, frame=color_image)
+            # loop over the tracks
+            for track in tracks:
+                # if the track is not confirmed, ignore it
+                if not track.is_confirmed():
+                    continue
+
+                # get the track id and the bounding box
+                track_id = track.track_id
+                ltrb = track.to_ltrb()
+
+                xmin, ymin, xmax, ymax = int(ltrb[0]), int(
+                    ltrb[1]), int(ltrb[2]), int(ltrb[3])
+                rospy.loginfo(f"box position is {[xmin, ymin, xmax, ymax]}")
+                # draw the bounding box and the track id
+                cv2.rectangle(color_image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+                cv2.rectangle(color_image, (xmin, ymin - 20), (xmin + 20, ymin), (0, 255, 0), -1)
+                cv2.putText(color_image, str(track_id), (xmin + 5, ymin - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)       
+            cv2.imshow("Frame", color_image)     
             rospy.loginfo(f"This frame is detected, and result is below:")
-            for one_object in object_list:
-                one_object.uv_trans_to_body(aligned_depth_frame, depth_intrin)
-                class_name = one_object.class_name
-                conf = one_object.confidence
-                body_position = one_object.body_position
-                rospy.loginfo(f"Class : {class_name}")
-                rospy.loginfo(f"confidence : {conf}")
-                rospy.loginfo(f"position : {body_position}")
-                rospy.loginfo(f"-----")
+            # for one_object in object_list:
+            #     one_object.uv_trans_to_body(aligned_depth_frame, depth_intrin)
+            #     class_name = one_object.class_name
+            #     conf = one_object.confidence
+            #     body_position = one_object.body_position
+            #     rospy.loginfo(f"Class : {class_name}")
+            #     rospy.loginfo(f"confidence : {conf}")
+            #     rospy.loginfo(f"position : {body_position}")
+            #     rospy.loginfo(f"-----")
             t_end = time.time()
             fps = int(1.0 / (t_end - t_start))
             rospy.loginfo(f"all process's FPS is : {fps}")
