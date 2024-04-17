@@ -12,6 +12,23 @@ from yolov8_ros_msgs.msg import BoundingBox, BoundingBoxes
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
 interest_class_list = [0, 64, 66, 67, 41, 73]
+interest_class_dict = {
+    0  : 'person',
+    64 : 'mouse',
+    67 : 'cell phone',
+    66 : 'keyboard',
+    41 : 'cup',
+    73 : ' book'
+}
+
+def compute_center(box):
+    x, y, w, h = box
+    return int((x + w / 2)), int((y + h / 2))
+
+def compute_distance(box1, box2):
+    x1, y1 = compute_center(box1)
+    x2, y2 = compute_center(box2)
+    return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 class Yolo_Dect:
     def __init__(self):
 
@@ -48,6 +65,8 @@ class Yolo_Dect:
             rospy.sleep(2)
 
     def image_callback(self, image):
+        self.boundingBoxes = BoundingBoxes()
+        self.boundingBoxes.header = image.header
         self.getImageStatus = True
         color_image = np.frombuffer(image.data, dtype=np.uint8).reshape(
             image.height, image.width, -1)
@@ -73,16 +92,38 @@ class Yolo_Dect:
             detections.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, class_id])
 
         tracks = self.tracker.update_tracks(detections, frame=self.color_image)
+        if tracks is not None:
+            self.match_detection_and_tracks(detections, tracks)
+        rospy.loginfo(f"box position is {[xmin, ymin, xmax, ymax]}"))                 
+        t_end = datetime.datetime.now()
+        rospy.loginfo(f"FPS : {1 / (t_end - t_start).total_seconds():.2f}")     
+
+    def match_detection_and_tracks(self, detections, tracks):
+        matches = []
         for track in tracks:
             if not track.is_confirmed():
                 continue
-            track_id = track.track_id
-            ltrb = track.to_ltrb()
-            xmin, ymin, xmax, ymax = int(ltrb[0]), int(ltrb[1]), int(ltrb[2]), int(ltrb[3])
-            rospy.loginfo(f"box position is {[xmin, ymin, xmax, ymax]}")
-            rospy.loginfo(f"track id is {track_id}")                 
-        t_end = datetime.datetime.now()
-        rospy.loginfo(f"FPS : {1 / (t_end - t_start).total_seconds():.2f}")     
+            one_box = BoundingBox()
+            track_box = track.to_tlwh()
+            one_box.track_id = track.track_id
+            one_box.x_center, one_box.y_center = compute_center(track_box)
+            one_box.xmin, one_box.ymin, one_box.xmax, one_box.ymax = int(track_box[0]), int(track_box[1]), int(track_box[0]+track_box[2]), int(track_box[1]+track_box[3])
+            if detections is None:
+                one_box.cls = 'Unknow'
+                one_box.confidence = -1.0
+                self.boundingBoxes.bounding_boxe.append(one_box)
+                return 
+            for detection in detections:
+                det_box = detection[0]  # xywh
+                min_distance = float('inf')
+                distance = compute_distance(det_box, track_box)
+                if distance < min_distance:
+                    min_distance = distance
+                    matched_detect = detection
+            one_box.confidence = matched_detect[1]
+            one_box.cls = interest_class_dict[matched_detect[2]]
+            self.boundingBoxes.bounding_boxe.append(one_box)
+        return matches
 
 def main():
     rospy.init_node('yolov8_ros', anonymous=True)

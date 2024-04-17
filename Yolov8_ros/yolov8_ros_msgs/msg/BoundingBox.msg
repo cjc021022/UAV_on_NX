@@ -1,7 +1,9 @@
-float64 probability
+float64 confidence
+int64 x_center
+int64 y_center
 int64 xmin
 int64 ymin
 int64 xmax
 int64 ymax
-string Class
-int64[] xywh
+string cls
+int64 track_id
