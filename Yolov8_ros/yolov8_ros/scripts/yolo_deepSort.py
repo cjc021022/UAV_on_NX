@@ -20,15 +20,10 @@ interest_class_dict = {
     41 : 'cup',
     73 : ' book'
 }
-
 def compute_center(box):
     x, y, w, h = box
     return int((x + w / 2)), int((y + h / 2))
 
-def compute_distance(box1, box2):
-    x1, y1 = compute_center(box1)
-    x2, y2 = compute_center(box2)
-    return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 class Yolo_Dect:
     def __init__(self):
 
@@ -55,7 +50,7 @@ class Yolo_Dect:
         self.model.conf = conf
         self.color_image = Image()
         self.getImageStatus = False
-        self.tracker = DeepSort(max_age=50)
+        self.is_tracker_init = False
         # image subscribe
         self.color_sub = rospy.Subscriber(image_topic, Image, self.image_callback,
                                           queue_size=1, buff_size=52428800)
@@ -80,50 +75,46 @@ class Yolo_Dect:
         if img_torch.ndimension() == 3:
             img_torch = img_torch.unsqueeze(0)        
         results = self.model.predict(img_torch, half=self.is_half, classes=interest_class_list, show=False, conf=0.7)
-        self.dectshow(results, image.height, image.width)
+        rospy.loginfo(f"FPS : { 1000.0/ results[0].speed['inference']}")
+        if results is None:
+            return
+        self.dectshow(results)
 
-    def dectshow(self, results, height, width):
+    def dectshow(self, results):
         t_start = datetime.datetime.now()
         detections = []
         for data in results[0].boxes.data.tolist():
             class_id = int(data[-1])
             confidence = data[4]
             xmin, ymin, xmax, ymax = int(data[0]), int(data[1]), int(data[2]), int(data[3])
-            detections.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, class_id])
-
-        tracks = self.tracker.update_tracks(detections, frame=self.color_image)
-        if tracks is not None:
-            self.match_detection_and_tracks(detections, tracks)
-        rospy.loginfo(f"box position is {[xmin, ymin, xmax, ymax]}"))                 
+            # detection = [xmin, ymin, xmax - xmin, ymax - ymin]
+            # detections.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, interest_class_dict[class_id]])
+        # self.CSRT_track(detection)
+        # self.deepSORT_track(detections)          
         t_end = datetime.datetime.now()
-        rospy.loginfo(f"FPS : {1 / (t_end - t_start).total_seconds():.2f}")     
+        rospy.loginfo(f"FPS : {1 / (t_end - t_start).total_seconds():.2f}")
+       
+    def CSRT_track(self, detection):
+        # detection = xywh
+        tracker = cv2.TrackerCSRT_create()
+        success, bbox = tracker.update(self.color_image)
+        if success:
+            xmin, ymin, width, height = [int(v) for v in bbox]
+            cv2.rectangle(self.color_image, (xmin, ymin), (xmin + width, ymin + height), (255, 0, 0), 2)
+        else:
+            tracker.init(self.color_image, tuple(detection))
+    
+    def deepSORT_track(self, detections):
+        # detections list of [ [xywh], confidence, class_name]
+        tracker = DeepSort(max_age=50)
+        tracks = tracker.update_tracks(detections, frame=self.color_image)
+        if tracks is not None:
+            for track in tracks:
+                if not track.is_confirmed():
+                    continue     
+                track_box = track.to_tlwh() # xywh
+                track_id = track.track_id          
 
-    def match_detection_and_tracks(self, detections, tracks):
-        matches = []
-        for track in tracks:
-            if not track.is_confirmed():
-                continue
-            one_box = BoundingBox()
-            track_box = track.to_tlwh()
-            one_box.track_id = track.track_id
-            one_box.x_center, one_box.y_center = compute_center(track_box)
-            one_box.xmin, one_box.ymin, one_box.xmax, one_box.ymax = int(track_box[0]), int(track_box[1]), int(track_box[0]+track_box[2]), int(track_box[1]+track_box[3])
-            if detections is None:
-                one_box.cls = 'Unknow'
-                one_box.confidence = -1.0
-                self.boundingBoxes.bounding_boxe.append(one_box)
-                return 
-            for detection in detections:
-                det_box = detection[0]  # xywh
-                min_distance = float('inf')
-                distance = compute_distance(det_box, track_box)
-                if distance < min_distance:
-                    min_distance = distance
-                    matched_detect = detection
-            one_box.confidence = matched_detect[1]
-            one_box.cls = interest_class_dict[matched_detect[2]]
-            self.boundingBoxes.bounding_boxe.append(one_box)
-        return matches
 
 def main():
     rospy.init_node('yolov8_ros', anonymous=True)

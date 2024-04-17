@@ -173,7 +173,7 @@ class YoloV5:
                 another_corner_position.extend((xyxy[2], xyxy[3]))
                 one_object.corner_points.extend((one_corner_position, another_corner_position))
                 object_list.append(one_object)
-        return object_list                    
+        return object_list
 
 def shutdown_node():
     pipeline.stop()
@@ -186,7 +186,6 @@ if __name__ == '__main__':
     # YOLOV5模型配置文件(YAML格式)的路径 yolov5_yaml_path
     model = YoloV5(yolov5_yaml_path='/home/nx/catkin_ws/src/yolo_depth_detect/config/yolov5s.yaml')
     rospy.loginfo("load YOLOv5 model success!")
-    rate = rospy.Rate(25)
     try:
         while not rospy.is_shutdown():
             # Wait for a coherent pair of frames: depth and color
@@ -210,8 +209,7 @@ if __name__ == '__main__':
                 rospy.loginfo(f"-----")
             t_end = time.time()
             fps = int(1.0 / (t_end - t_start))
-            rospy.loginfo(f"FPS : {fps}")
-            rate.sleep()
+            rospy.loginfo(f"FPS is : {fps}")
     finally:
         # Stop streaming
         rospy.on_shutdown(shutdown_node)
