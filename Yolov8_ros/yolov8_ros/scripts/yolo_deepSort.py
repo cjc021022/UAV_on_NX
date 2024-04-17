@@ -8,6 +8,7 @@ from ultralytics import YOLO
 import datetime
 from std_msgs.msg import Header
 from sensor_msgs.msg import Image
+from yolov8_ros_msgs.msg import BoundingBox, BoundingBoxes
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
 interest_class_list = [0, 64, 66, 67, 41, 73]
@@ -22,7 +23,7 @@ class Yolo_Dect:
         conf = rospy.get_param('~conf', '0.5')
         self.depth_image_width=rospy.get_param('depth_image_width','')
         self.depth_image_height=rospy.get_param('depth_image_height','')
-
+        pub_topic = rospy.get_param('~pub_topic', '')
         # which device will be used
         if (rospy.get_param('/use_cpu', 'false')):
             self.device = 'cpu'
@@ -41,6 +42,7 @@ class Yolo_Dect:
         # image subscribe
         self.color_sub = rospy.Subscriber(image_topic, Image, self.image_callback,
                                           queue_size=1, buff_size=52428800)
+        self.position_pub = rospy.Publisher(pub_topic, BoundingBoxes, queue_size=1)        
         while (not self.getImageStatus):
             rospy.loginfo("waiting for image.")
             rospy.sleep(2)

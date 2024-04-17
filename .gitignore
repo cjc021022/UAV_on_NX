@@ -1,2 +1,4 @@
 __pycache__
 *.pt
+intrinsics.json
+camera_info.py
