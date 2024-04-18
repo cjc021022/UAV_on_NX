@@ -10,7 +10,7 @@ from std_msgs.msg import Header
 from sensor_msgs.msg import Image
 from yolov8_ros_msgs.msg import BoundingBox, BoundingBoxes
 from deep_sort_realtime.deepsort_tracker import DeepSort
-
+# tracker = cv2.TrackerCSRT_create() # CSRT
 interest_class_list = [0, 64, 66, 67, 41, 73]
 interest_class_dict = {
     0  : 'person',
@@ -54,7 +54,7 @@ class Yolo_Dect:
         # image subscribe
         self.color_sub = rospy.Subscriber(image_topic, Image, self.image_callback,
                                           queue_size=1, buff_size=52428800)
-        self.position_pub = rospy.Publisher(pub_topic, BoundingBoxes, queue_size=1)        
+        self.position_pub = rospy.Publisher(pub_topic, BoundingBoxes, queue_size=10)        
         while (not self.getImageStatus):
             rospy.loginfo("waiting for image.")
             rospy.sleep(2)
@@ -75,38 +75,50 @@ class Yolo_Dect:
         if img_torch.ndimension() == 3:
             img_torch = img_torch.unsqueeze(0)        
         results = self.model.predict(img_torch, half=self.is_half, classes=interest_class_list, show=False, conf=0.7)
-        rospy.loginfo(f"FPS : { 1000.0/ results[0].speed['inference']}")
+        rospy.loginfo(f"detect FPS : { 1000.0/ results[0].speed['inference']}")
         if results is None:
             return
         self.dectshow(results)
 
     def dectshow(self, results):
+        rate = rospy.Rate(30)
         t_start = datetime.datetime.now()
-        detections = []
+        # detections = []
         for data in results[0].boxes.data.tolist():
+            one_box = BoundingBox()
             class_id = int(data[-1])
             confidence = data[4]
             xmin, ymin, xmax, ymax = int(data[0]), int(data[1]), int(data[2]), int(data[3])
-            # detection = [xmin, ymin, xmax - xmin, ymax - ymin]
-            # detections.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, interest_class_dict[class_id]])
+            one_box.xmin, one_box.ymin, one_box.xmax, one_box.ymax = xmin, ymin, xmax, ymax
+            one_box.cls = interest_class_dict[class_id]
+            one_box.confidence = confidence
+            self.boundingBoxes.bounding_boxes.append(one_box)
+            # detections.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, interest_class_dict[class_id]]) deepSORT            
+            # detection = [xmin, ymin, xmax - xmin, ymax - ymin]  CSRT
+        self.position_pub.publish(self.boundingBoxes)
+        rate.sleep()
         # self.CSRT_track(detection)
         # self.deepSORT_track(detections)          
         t_end = datetime.datetime.now()
-        rospy.loginfo(f"FPS : {1 / (t_end - t_start).total_seconds():.2f}")
+        rospy.loginfo(f"track FPS : {1 / (t_end - t_start).total_seconds():.2f}")
        
     def CSRT_track(self, detection):
         # detection = xywh
-        tracker = cv2.TrackerCSRT_create()
-        success, bbox = tracker.update(self.color_image)
-        if success:
+        if self.is_tracker_init:
+            success, bbox = tracker.update(self.color_image)
+            if not success:
+                self.is_tracker_init = False
+                rospy.loginfo(f"update not success!")
             xmin, ymin, width, height = [int(v) for v in bbox]
-            cv2.rectangle(self.color_image, (xmin, ymin), (xmin + width, ymin + height), (255, 0, 0), 2)
-        else:
+            rospy.loginfo(f"position is {bbox}")
+            # cv2.rectangle(self.color_image, (xmin, ymin), (xmin + width, ymin + height), (255, 0, 0), 2)
+        if not self.is_tracker_init:
             tracker.init(self.color_image, tuple(detection))
+            self.is_tracker_init = True
     
     def deepSORT_track(self, detections):
         # detections list of [ [xywh], confidence, class_name]
-        tracker = DeepSort(max_age=50)
+        tracker = DeepSort(max_age=2)
         tracks = tracker.update_tracks(detections, frame=self.color_image)
         if tracks is not None:
             for track in tracks:
