@@ -11,7 +11,8 @@ from sensor_msgs.msg import Image
 from yolov8_ros_msgs.msg import BoundingBox, BoundingBoxes
 from deep_sort_realtime.deepsort_tracker import DeepSort
 # tracker = cv2.TrackerCSRT_create() # CSRT
-interest_class_list = [0, 64, 66, 67, 41, 73]
+# interest_class_list = [0, 64, 66, 67, 41, 73]
+interest_class_list = [0]
 interest_class_dict = {
     0  : 'person',
     64 : 'mouse',
@@ -93,6 +94,7 @@ class Yolo_Dect:
             one_box.cls = interest_class_dict[class_id]
             one_box.confidence = confidence
             self.boundingBoxes.bounding_boxes.append(one_box)
+            break
             # detections.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, interest_class_dict[class_id]]) deepSORT            
             # detection = [xmin, ymin, xmax - xmin, ymax - ymin]  CSRT
         self.position_pub.publish(self.boundingBoxes)

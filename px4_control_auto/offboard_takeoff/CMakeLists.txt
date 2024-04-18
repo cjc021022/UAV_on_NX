@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(realsense2 REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -125,6 +126,7 @@ include_directories(
 include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}  
+  ${Eigen3_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -150,6 +152,7 @@ add_executable(test_takeoff ${PROJECT_SOURCE_DIR}/src/test.cpp)
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_definitions(${EIGEN_DEFINITIONS})
 add_dependencies(offboard_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(position_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(realsense_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

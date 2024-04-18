@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 #include "offboard_takeoff/offboard_control.h"
-#include"realsense_depth/depth_helper.h"
+#include "realsense_depth/depth_helper.h"
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "offboard_hover_node");
@@ -13,6 +13,7 @@ int main(int argc, char** argv) {
     // }
     std::string boudingbox_topic = "/yolov8/BoundingBoxes";
     realsenseHelper::depth_helper depth_helper(nh, boudingbox_topic);
+    depth_helper.publisher_point();
     ros::spin();
     return 0;
 }

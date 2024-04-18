@@ -12,7 +12,7 @@ namespace OffboardControl{
         pose.pose.position.z = z;
         pose.pose.orientation.w = 0.707;
         pose.pose.orientation.z = 0.707;
-        ros::Rate rate(20.0);
+        ros::Rate rate(30.0);
         while(ros::ok()){
             local_pose_pub.publish(pose);
             ros::spinOnce();
