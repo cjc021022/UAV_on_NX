@@ -17,7 +17,7 @@ namespace OffboardControl {
     // 进入Offboard模式并解锁
     bool offboard_takeoff:: takeoff() {
         // 等待当前状态可用
-        ros::Rate rate(20.0);
+        ros::Rate rate(30.0);
         while (ros::ok() && !current_state_.connected) {
             ros::spinOnce();
             rate.sleep();

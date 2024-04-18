@@ -12,9 +12,13 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs 
+  cv_bridge
   mavros_msgs
+  sensor_msgs
+  yolov8_ros_msgs
 )
-
+find_package(realsense2 REQUIRED)
+find_package(OpenCV REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -107,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES offboard_takeoff
- CATKIN_DEPENDS roscpp rospy std_msgs mavros_msgs  
+ CATKIN_DEPENDS roscpp rospy std_msgs mavros_msgs sensor_msgs
 #  DEPENDS system_lib
 )
 
@@ -120,6 +124,7 @@ catkin_package(
 include_directories(
 include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}  
 )
 
 ## Declare a C++ library
@@ -134,8 +139,12 @@ add_library(position_init
   include/offboard_takeoff/offboard_control.h
   ${PROJECT_SOURCE_DIR}/src/offboard_control/position_hover.cpp
 )
+add_library(realsense_init
+  include/realsense_depth/depth_helper.h
+  ${PROJECT_SOURCE_DIR}/src/realsense_operation/depth_helper.cpp
+)
 
-add_executable(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/offboard_main/offboard_takeoff.cpp)
+add_executable(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/main/main.cpp)
 add_executable(test_takeoff ${PROJECT_SOURCE_DIR}/src/test.cpp)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -143,6 +152,7 @@ add_executable(test_takeoff ${PROJECT_SOURCE_DIR}/src/test.cpp)
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(offboard_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(position_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(realsense_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -169,9 +179,13 @@ target_link_libraries(offboard_init
 target_link_libraries(position_init
   ${catkin_LIBRARIES}
 )
+target_link_libraries(realsense_init
+  ${catkin_LIBRARIES}
+)
 target_link_libraries(${PROJECT_NAME} 
   offboard_init 
   position_init
+  realsense_init
   ${catkin_LIBRARIES}
 )
 target_link_libraries(test_takeoff
