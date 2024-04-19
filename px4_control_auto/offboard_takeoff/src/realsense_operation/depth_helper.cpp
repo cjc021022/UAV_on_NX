@@ -13,7 +13,7 @@ namespace realsenseHelper{
         return K;
     }
 
-    depth_helper::depth_helper(ros::NodeHandle & nh, std::string boudingboxes_topic) : nh_(nh), x_center(0), y_center(0){
+    depth_helper::depth_helper(ros::NodeHandle & nh, std::string boudingboxes_topic) : nh_(nh), x_center(-1), y_center(-1){
         align_depth_image_sub_ = nh_.subscribe<sensor_msgs::Image>("/camera/aligned_depth_to_color/image_raw", 1, boost::bind(&depth_helper::readDepthImage, this, _1));
         boudingboxes_sub_ = nh_.subscribe<yolov8_ros_msgs::BoundingBoxes>(boudingboxes_topic, 10, boost::bind(&depth_helper::updateBoudingBoxes, this, _1));
         camera_frame_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/camera_frame/center_point", 10);
@@ -39,35 +39,47 @@ namespace realsenseHelper{
             bounding_boxes_.push_back(bounding_box);
         }
     }
-    void depth_helper::getDepthDistanceFromPoint(){
-        if (depth_frame_.empty()) {
+    bool depth_helper::getDepthDistanceFromPoint(){
+        if (depth_frame_.empty() || x_center < 0 || y_center < 0) {
             ROS_DEBUG("Depth image not available.");
-            return;
+            return false;
         }        
         ushort dis = depth_frame_.at<ushort>(y_center, x_center); 
         // ushort dis = depth_image.at<ushort>(320, 240);
         center_distance_ = double (dis)/1000 ;
-        ROS_INFO("Value of depth_pic's pixel= %.2f", center_distance_);
+        return true;
+        // ROS_INFO("Value of depth_pic's pixel= %.2f", center_distance_);
     }
-    Eigen::Vector3d depth_helper::imageToCameraCoords(){
-        getDepthDistanceFromPoint();
+    Eigen::Vector3d depth_helper::imageToBodyCoords(){
+        if(!getDepthDistanceFromPoint()){
+            return Eigen::Vector3d::Zero();
+        }
         Eigen::Vector3d pixel_coords(x_center, y_center, 1.0);
         Eigen::Vector3d normalized_coords = depth_intrin_ * pixel_coords;  // [x_norm, y_norm, 1]^T
         Eigen::Vector3d camera_coords(center_distance_, center_distance_, center_distance_); 
         Eigen::Vector3d camera_point_vector = normalized_coords.cwiseProduct(camera_coords); //camera_point[0--2] xyz
-        return camera_point_vector;
+        double theta = 30 * M_PI / 180; // 30°对应的弧度值
+        Eigen::Matrix3d Rx;
+        Rx << 1, 0, 0,
+            0, cos(theta), -sin(theta),
+            0, sin(theta), cos(theta);
+        Eigen::Vector3d translation_vector(0, 0, 0); // 平移
+        Eigen::Vector3d transformed_point = Rx * camera_point_vector;  
+        return transformed_point;           
     }
     void depth_helper::publisher_point(){
         ros::Rate rate(30);
+        geometry_msgs::PoseStamped target_point;
+        target_point.header.frame_id = "UAV_body_frame"; 
         while (ros::ok()){
-            Eigen::Vector3d camera_point_vector = imageToCameraCoords();
-            geometry_msgs::PoseStamped camera_point;
-            camera_point.header.stamp = ros::Time::now(); // 设置当前时间为时间戳
-            camera_point.header.frame_id = "camera_frame"; 
-            camera_point.pose.position.x = camera_point_vector.x();
-            camera_point.pose.position.y = camera_point_vector.y();
-            camera_point.pose.position.z = camera_point_vector.z();
-            camera_frame_pub_.publish(camera_point);
+            Eigen::Vector3d UAV_body_point = imageToBodyCoords();
+            if (!UAV_body_point.isZero()){
+                target_point.pose.position.x = UAV_body_point[0];
+                target_point.pose.position.y = UAV_body_point[2];
+                target_point.pose.position.z = UAV_body_point[1];                  
+            }
+            target_point.header.stamp = ros::Time::now(); // 设置当前时间为时间戳
+            camera_frame_pub_.publish(target_point);
             ros::spinOnce();
             rate.sleep();
         }

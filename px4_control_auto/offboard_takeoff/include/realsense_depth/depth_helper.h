@@ -23,8 +23,8 @@ namespace realsenseHelper{
             depth_helper(ros::NodeHandle& nh, std::string boudingboxes_topic); 
             int64_t x_center;
             int64_t y_center;
-            void getDepthDistanceFromPoint();
-            Eigen::Vector3d imageToCameraCoords();
+            bool getDepthDistanceFromPoint();
+            Eigen::Vector3d imageToBodyCoords();
             void publisher_point();
         private:
             ros::NodeHandle nh_;

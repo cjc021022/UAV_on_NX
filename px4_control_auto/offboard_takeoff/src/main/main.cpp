@@ -14,6 +14,6 @@ int main(int argc, char** argv) {
     std::string boudingbox_topic = "/yolov8/BoundingBoxes";
     realsenseHelper::depth_helper depth_helper(nh, boudingbox_topic);
     depth_helper.publisher_point();
-    ros::spin();
+    // ros::spin();
     return 0;
 }

@@ -14,8 +14,8 @@
   <arg name="fisheye_height"      default="-1"/>
   <arg name="enable_fisheye"      default="false"/>
 
-  <arg name="depth_width"         default="-1"/>
-  <arg name="depth_height"        default="-1"/>
+  <arg name="depth_width"         default="848"/>
+  <arg name="depth_height"        default="480"/>
   <arg name="enable_depth"        default="true"/>
 
   <arg name="confidence_width"    default="-1"/>
