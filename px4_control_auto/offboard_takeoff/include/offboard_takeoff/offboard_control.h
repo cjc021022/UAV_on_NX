@@ -3,7 +3,6 @@
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/State.h>
 #include <geometry_msgs/PoseStamped.h>
-
 namespace OffboardControl{
     bool setMode(ros::ServiceClient set_mode_client);
     bool sendArmCommand(ros::ServiceClient arming_client);

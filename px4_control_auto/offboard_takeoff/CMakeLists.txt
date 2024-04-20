@@ -145,6 +145,10 @@ add_library(realsense_init
   include/realsense_depth/depth_helper.h
   ${PROJECT_SOURCE_DIR}/src/realsense_operation/depth_helper.cpp
 )
+add_library(track_control_init
+  include/offboard_takeoff/track_control.h
+  ${PROJECT_SOURCE_DIR}/src/offboard_control/track_control.cpp
+)
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/main/main.cpp)
 add_executable(test_takeoff ${PROJECT_SOURCE_DIR}/src/test.cpp)
@@ -156,6 +160,7 @@ add_definitions(${EIGEN_DEFINITIONS})
 add_dependencies(offboard_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(position_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(realsense_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(track_control_init ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -185,10 +190,14 @@ target_link_libraries(position_init
 target_link_libraries(realsense_init
   ${catkin_LIBRARIES}
 )
+target_link_libraries(track_control_init
+  ${catkin_LIBRARIES}
+)
 target_link_libraries(${PROJECT_NAME} 
   offboard_init 
   position_init
   realsense_init
+  track_control_init
   ${catkin_LIBRARIES}
 )
 target_link_libraries(test_takeoff

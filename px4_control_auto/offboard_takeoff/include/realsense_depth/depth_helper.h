@@ -1,3 +1,4 @@
+#pragma once
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
@@ -5,7 +6,6 @@
 #include <librealsense2/rs.hpp>
 #include<vector>
 #include"yolov8_ros_msgs/BoundingBoxes.h"
-#include"Eigen/Core"
 #include<Eigen/Dense>
 namespace realsenseHelper{
     struct depth_intri{
