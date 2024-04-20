@@ -57,7 +57,8 @@ namespace realsenseHelper{
         Eigen::Vector3d pixel_coords(x_center, y_center, 1.0);
         Eigen::Vector3d normalized_coords = depth_intrin_ * pixel_coords;  // [x_norm, y_norm, 1]^T
         Eigen::Vector3d camera_coords(center_distance_, center_distance_, center_distance_); 
-        Eigen::Vector3d camera_point_vector = normalized_coords.cwiseProduct(camera_coords); //camera_point[0--2] xyz
+        Eigen::Vector3d camera_point_vector = normalized_coords.cwiseProduct(camera_coords); //camera_point[0--2] xzy
+        std::swap(camera_point_vector(1), camera_point_vector(2)); // camera_point xyz
         double theta = 30 * M_PI / 180; // 30°对应的弧度值
         Eigen::Matrix3d Rx;
         Rx << 1, 0, 0,
@@ -75,8 +76,8 @@ namespace realsenseHelper{
             Eigen::Vector3d UAV_body_point = imageToBodyCoords();
             if (!UAV_body_point.isZero()){
                 target_point.pose.position.x = UAV_body_point[0];
-                target_point.pose.position.y = UAV_body_point[2];
-                target_point.pose.position.z = UAV_body_point[1];                  
+                target_point.pose.position.y = UAV_body_point[1];
+                target_point.pose.position.z = UAV_body_point[2];                  
             }
             target_point.header.stamp = ros::Time::now(); // 设置当前时间为时间戳
             camera_frame_pub_.publish(target_point);
