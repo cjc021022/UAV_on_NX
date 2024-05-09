@@ -48,10 +48,10 @@ namespace OffboardControl{
         if(distance_ > 0 && -0.1 <= delta_x_ && delta_x_ <= 0.1){
             track_control::track_mode(vel);
             target_pose.pose.position.x = distance_ - 2.0;
-            target_pose.pose.position.z = 1;
         }
         else{
             track_control::observe_mode(vel);
-        }          
+        }
+        target_pose_pub.publish(target_pose);    
     }
 }

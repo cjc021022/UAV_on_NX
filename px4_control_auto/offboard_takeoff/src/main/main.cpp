@@ -20,7 +20,10 @@ int main(int argc, char** argv) {
     geometry_msgs::Twist vel;
     geometry_msgs::PoseStamped target_pose;
     target_pose.pose.orientation.w = 0.707;
-    target_pose.pose.orientation.z = 0.707;      
+    target_pose.pose.orientation.z = 0.707; 
+    target_pose.pose.position.x = 0;
+    target_pose.pose.position.y = 0;   
+    target_pose.pose.position.z = 1;  
     ros::Rate rate(30);
     while(ros::ok){
         if(success){
