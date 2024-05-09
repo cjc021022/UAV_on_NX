@@ -12,7 +12,7 @@ namespace OffboardControl{
             track_control(ros::NodeHandle& nh);
             void observe_mode(geometry_msgs::Twist vel);
             void track_mode(geometry_msgs::Twist vel);
-            void track_process();
+            void track_process(geometry_msgs::Twist vel, geometry_msgs::PoseStamped target_pose);
         private:
             ros::NodeHandle nh_;
             ros::Subscriber object_position_sub_;

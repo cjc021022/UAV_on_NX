@@ -1,10 +1,8 @@
 #include"realsense_depth/depth_helper.h"
 #include <sensor_msgs/image_encodings.h>
 #include <image_transport/image_transport.h>
-#include <geometry_msgs/PoseStamped.h>
 #include"yolov8_ros_msgs/BoundingBox.h"
 #include<Eigen/Dense>
-#include "std_msgs/Float64.h"
 namespace realsenseHelper{
     Eigen::Matrix3d intrinToMatrix(const depth_intri& depth_intrin) {
         Eigen::Matrix3d K;
@@ -70,25 +68,17 @@ namespace realsenseHelper{
         Eigen::Vector3d transformed_point = Rx * camera_point_vector;  
         return transformed_point;           
     }
-    void depth_helper::publisher_point(){
-        ros::Rate rate(30);
-        geometry_msgs::PoseStamped target_point;
-        std_msgs::Float64 distance_msg;
-        target_point.header.frame_id = "UAV_body_frame";
-        while (ros::ok()){
-            Eigen::Vector3d UAV_body_point = imageToBodyCoords();
-            distance_msg.data = -1;
-            if (!UAV_body_point.isZero()){
-                target_point.pose.position.x = UAV_body_point[0];
-                target_point.pose.position.y = UAV_body_point[1];
-                target_point.pose.position.z = UAV_body_point[2];  
-                distance_msg.data = std::sqrt(std::pow(UAV_body_point[0], 2) + std::pow(UAV_body_point[1], 2));    
-            }
-            target_point.header.stamp = ros::Time::now(); // 设置当前时间为时间戳
-            camera_frame_pub_.publish(target_point);
-            distance_pub_.publish(distance_msg);
-            ros::spinOnce();
-            rate.sleep();
+    void depth_helper::publisher_point(geometry_msgs::PoseStamped target_point, std_msgs::Float64 distance_msg){
+        Eigen::Vector3d UAV_body_point = imageToBodyCoords();
+        distance_msg.data = -1;
+        if (!UAV_body_point.isZero()){
+            target_point.pose.position.x = UAV_body_point[0];
+            target_point.pose.position.y = UAV_body_point[1];
+            target_point.pose.position.z = UAV_body_point[2];  
+            distance_msg.data = std::sqrt(std::pow(UAV_body_point[0], 2) + std::pow(UAV_body_point[1], 2));    
         }
+        target_point.header.stamp = ros::Time::now(); // 设置当前时间为时间戳
+        camera_frame_pub_.publish(target_point);
+        distance_pub_.publish(distance_msg);
     }
 }

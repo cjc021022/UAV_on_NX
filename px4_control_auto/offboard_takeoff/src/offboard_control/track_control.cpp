@@ -44,22 +44,14 @@ namespace OffboardControl{
     void track_control::track_mode(geometry_msgs::Twist vel){
         vel.angular.z = 0.0;
     }
-    void track_control::track_process(){
-        geometry_msgs::Twist vel;
-        geometry_msgs::PoseStamped target_pose;
-        target_pose.pose.orientation.w = 0.707;
-        target_pose.pose.orientation.z = 0.707;
-        ros::Rate rate(30.0);
-        while(ros::ok()){
-            if(distance_ > 0 && -0.1 <= delta_x_ && delta_x_ <= 0.1){
-                track_control::track_mode(vel);
-                target_pose.pose.position.x = distance_ - 2.0;
-            }
-            else{
-                track_control::observe_mode(vel);
-            }
-            ros::spinOnce();
-            rate.sleep();            
+    void track_control::track_process(geometry_msgs::Twist vel, geometry_msgs::PoseStamped target_pose){
+        if(distance_ > 0 && -0.1 <= delta_x_ && delta_x_ <= 0.1){
+            track_control::track_mode(vel);
+            target_pose.pose.position.x = distance_ - 2.0;
+            target_pose.pose.position.z = 1;
         }
+        else{
+            track_control::observe_mode(vel);
+        }          
     }
 }

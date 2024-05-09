@@ -13,10 +13,22 @@ int main(int argc, char** argv) {
     // }
     std::string boudingbox_topic = "/yolov8/BoundingBoxes";
     realsenseHelper::depth_helper depth_helper(nh, boudingbox_topic);
-    depth_helper.publisher_point();
+    geometry_msgs::PoseStamped target_point;
+    target_point.header.frame_id = "UAV_body_frame";
+    std_msgs::Float64 distance_msg;
     OffboardControl::track_control track_control(nh);
-    if(success){
-        track_control.track_process();
+    geometry_msgs::Twist vel;
+    geometry_msgs::PoseStamped target_pose;
+    target_pose.pose.orientation.w = 0.707;
+    target_pose.pose.orientation.z = 0.707;      
+    ros::Rate rate(30);
+    while(ros::ok){
+        if(success){
+            depth_helper.publisher_point(target_point, distance_msg);
+            track_control.track_process(vel, target_pose);
+        }
+        ros::spinOnce();
+        rate.sleep();        
     }
     // ros::spin();
     return 0;

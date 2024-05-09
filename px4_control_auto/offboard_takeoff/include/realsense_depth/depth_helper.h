@@ -6,6 +6,8 @@
 #include <librealsense2/rs.hpp>
 #include<vector>
 #include"yolov8_ros_msgs/BoundingBoxes.h"
+#include <geometry_msgs/PoseStamped.h>
+#include "std_msgs/Float64.h"
 #include<Eigen/Dense>
 namespace realsenseHelper{
     struct depth_intri{
@@ -25,7 +27,7 @@ namespace realsenseHelper{
             int64_t y_center;
             bool getDepthDistanceFromPoint();
             Eigen::Vector3d imageToBodyCoords();
-            void publisher_point();
+            void publisher_point(geometry_msgs::PoseStamped target_point, std_msgs::Float64 distance_msg);
         private:
             ros::NodeHandle nh_;
             ros::Subscriber align_depth_image_sub_;
