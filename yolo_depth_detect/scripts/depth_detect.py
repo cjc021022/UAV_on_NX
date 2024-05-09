@@ -209,7 +209,7 @@ if __name__ == '__main__':
                 rospy.loginfo(f"-----")
             t_end = time.time()
             fps = int(1.0 / (t_end - t_start))
-            rospy.loginfo(f"FPS is : {fps}")
+            # rospy.loginfo(f"FPS is : {fps}")
     finally:
         # Stop streaming
         rospy.on_shutdown(shutdown_node)

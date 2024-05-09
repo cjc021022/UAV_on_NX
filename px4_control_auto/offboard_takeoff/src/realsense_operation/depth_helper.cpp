@@ -4,6 +4,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include"yolov8_ros_msgs/BoundingBox.h"
 #include<Eigen/Dense>
+#include "std_msgs/Float64.h"
 namespace realsenseHelper{
     Eigen::Matrix3d intrinToMatrix(const depth_intri& depth_intrin) {
         Eigen::Matrix3d K;
@@ -17,6 +18,7 @@ namespace realsenseHelper{
         align_depth_image_sub_ = nh_.subscribe<sensor_msgs::Image>("/camera/aligned_depth_to_color/image_raw", 1, boost::bind(&depth_helper::readDepthImage, this, _1));
         boudingboxes_sub_ = nh_.subscribe<yolov8_ros_msgs::BoundingBoxes>(boudingboxes_topic, 10, boost::bind(&depth_helper::updateBoudingBoxes, this, _1));
         camera_frame_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/camera_frame/center_point", 10);
+        distance_pub_ = nh_.advertise<std_msgs::Float64>("/object_detect/object_distance", 10);
         depth_intri default_intrin;
         depth_intrin_ = intrinToMatrix(default_intrin);
         // std::cout << "Depth intrinsic matrix:\n" << depth_intrin_ << std::endl;
@@ -71,16 +73,20 @@ namespace realsenseHelper{
     void depth_helper::publisher_point(){
         ros::Rate rate(30);
         geometry_msgs::PoseStamped target_point;
-        target_point.header.frame_id = "UAV_body_frame"; 
+        std_msgs::Float64 distance_msg;
+        target_point.header.frame_id = "UAV_body_frame";
         while (ros::ok()){
             Eigen::Vector3d UAV_body_point = imageToBodyCoords();
+            distance_msg.data = -1;
             if (!UAV_body_point.isZero()){
                 target_point.pose.position.x = UAV_body_point[0];
                 target_point.pose.position.y = UAV_body_point[1];
-                target_point.pose.position.z = UAV_body_point[2];                  
+                target_point.pose.position.z = UAV_body_point[2];  
+                distance_msg.data = std::sqrt(std::pow(UAV_body_point[0], 2) + std::pow(UAV_body_point[1], 2));    
             }
             target_point.header.stamp = ros::Time::now(); // 设置当前时间为时间戳
             camera_frame_pub_.publish(target_point);
+            distance_pub_.publish(distance_msg);
             ros::spinOnce();
             rate.sleep();
         }

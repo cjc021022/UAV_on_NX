@@ -31,6 +31,7 @@ namespace realsenseHelper{
             ros::Subscriber align_depth_image_sub_;
             ros::Subscriber boudingboxes_sub_;
             ros::Publisher camera_frame_pub_; 
+            ros::Publisher distance_pub_;
             std::vector<yolov8_ros_msgs::BoundingBox> bounding_boxes_;
             std::string class_name;
             cv::Mat depth_frame_;

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /home/nx/miniconda3/envs/py_cv/bin/python
 # -*- coding: utf-8 -*-
 import cv2
 import torch
@@ -95,7 +95,7 @@ class Yolo_Dect:
             one_box.confidence = confidence
             self.boundingBoxes.bounding_boxes.append(one_box)
             break
-            # detections.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, interest_class_dict[class_id]]) deepSORT            
+            # detections.append([[xmin, ymin, xmax - xmin, ymax - ymin], confidence, interest_class_dict[class_id]])        
             # detection = [xmin, ymin, xmax - xmin, ymax - ymin]  CSRT
         self.position_pub.publish(self.boundingBoxes)
         rate.sleep()
