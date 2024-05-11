@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
     target_pose_pub = nh.advertise<mavros_msgs::PositionTarget>("mavros/setpoint_raw/local", 10);
     OffboardControl::offboard_takeoff offboard_takeoff(nh);
     bool success = offboard_takeoff.takeoff();
-    ''' hover at the position (x, y, z) '''
+    /* hover at the position (x, y, z)  */ 
     // OffboardControl::position_hover position_hover(nh);  
     // if(success){
     //     position_hover.moveToPosition(0,0,1);
