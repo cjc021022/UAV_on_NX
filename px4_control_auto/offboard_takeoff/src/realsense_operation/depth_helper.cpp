@@ -13,6 +13,8 @@ namespace realsenseHelper{
     }
 
     depth_helper::depth_helper(ros::NodeHandle & nh, std::string boudingboxes_topic) : nh_(nh), x_center(-1), y_center(-1){
+        target_point_.header.frame_id = "UAV_body_frame";
+        distance_msg_.data = -1;
         align_depth_image_sub_ = nh_.subscribe<sensor_msgs::Image>("/camera/aligned_depth_to_color/image_raw", 1, boost::bind(&depth_helper::readDepthImage, this, _1));
         boudingboxes_sub_ = nh_.subscribe<yolov8_ros_msgs::BoundingBoxes>(boudingboxes_topic, 10, boost::bind(&depth_helper::updateBoudingBoxes, this, _1));
         camera_frame_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/camera_frame/center_point", 10);
@@ -68,17 +70,17 @@ namespace realsenseHelper{
         Eigen::Vector3d transformed_point = Rx * camera_point_vector;  
         return transformed_point;           
     }
-    void depth_helper::publisher_point(geometry_msgs::PoseStamped target_point, std_msgs::Float64 distance_msg){
+    void depth_helper::publisher_point(){
         Eigen::Vector3d UAV_body_point = imageToBodyCoords();
-        distance_msg.data = -1;
+        distance_msg_.data = -1;
         if (!UAV_body_point.isZero()){
-            target_point.pose.position.x = UAV_body_point[0];
-            target_point.pose.position.y = UAV_body_point[1];
-            target_point.pose.position.z = UAV_body_point[2];  
-            distance_msg.data = std::sqrt(std::pow(UAV_body_point[0], 2) + std::pow(UAV_body_point[1], 2));    
+            target_point_.pose.position.x = UAV_body_point[0];
+            target_point_.pose.position.y = UAV_body_point[1];
+            target_point_.pose.position.z = UAV_body_point[2];  
+            distance_msg_.data = std::sqrt(std::pow(UAV_body_point[0], 2) + std::pow(UAV_body_point[1], 2));    
         }
-        target_point.header.stamp = ros::Time::now(); // 设置当前时间为时间戳
-        camera_frame_pub_.publish(target_point);
-        distance_pub_.publish(distance_msg);
+        target_point_.header.stamp = ros::Time::now(); // 设置当前时间为时间戳
+        camera_frame_pub_.publish(target_point_);
+        distance_pub_.publish(distance_msg_);
     }
 }

@@ -7,12 +7,30 @@ namespace OffboardControl{
         object_position_sub_ = 
         nh_.subscribe<geometry_msgs::PoseStamped>("/camera_frame/center_point", 10, boost::bind(&track_control::updatePosition, this, _1));
         distance_sub_ = nh_.subscribe<std_msgs::Float64>("/object_detect/object_distance", 10, boost::bind(&track_control::updateDistance, this, _1));
-        yaw_vel_pub = nh_.advertise<geometry_msgs::TwistStamped>("mavros/setpoint_velocity/cmd_vel", 10);
-        target_pose_pub = nh_.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 10);
+        height_sub = nh.subscribe<mavros_msgs::Altitude>("/mavros/altitude", 10, boost::bind(&track_control::getCurrentHeight, this, _1));
         distance_ = -1;
         delta_x_ = -1;
+        target_pose.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED;
+        target_pose.type_mask = 
+            // mavros_msgs::PositionTarget::IGNORE_PX |
+            // mavros_msgs::PositionTarget::IGNORE_PY |
+            // mavros_msgs::PositionTarget::IGNORE_PZ |
+            mavros_msgs::PositionTarget::IGNORE_VX |
+            mavros_msgs::PositionTarget::IGNORE_VY |
+            mavros_msgs::PositionTarget::IGNORE_VZ |
+            mavros_msgs::PositionTarget::IGNORE_AFX |
+            mavros_msgs::PositionTarget::IGNORE_AFY |
+            mavros_msgs::PositionTarget::IGNORE_AFZ |
+            mavros_msgs::PositionTarget::FORCE |
+            mavros_msgs::PositionTarget::IGNORE_YAW |
+            mavros_msgs::PositionTarget::IGNORE_YAW_RATE;    
+        target_pose.position.x = 0;
+        target_pose.position.y = 0;   
+        target_pose.position.z = 1;        
     }
-
+    void track_control::getCurrentHeight(const mavros_msgs::Altitude::ConstPtr &msg){
+        current_height = msg->local;
+    }
     void track_control::updatePositionBufferWithSmooth(const Eigen::Vector3d new_point){
         position_buffer_.push_back(new_point);
         if (position_buffer_.size() > 5) {
@@ -37,21 +55,47 @@ namespace OffboardControl{
         ROS_INFO("the distance is %f", distance_);
     }
 
-    void track_control::observe_mode(geometry_msgs::Twist vel){
-        vel.angular.z = 0.5;
-        yaw_vel_pub.publish(vel);
+    void track_control::observe_mode(){
+        ROS_INFO("Observe Mode...");
+        target_pose.type_mask = 
+            // mavros_msgs::PositionTarget::IGNORE_PX |
+            // mavros_msgs::PositionTarget::IGNORE_PY |
+            // mavros_msgs::PositionTarget::IGNORE_PZ |
+            mavros_msgs::PositionTarget::IGNORE_VX |
+            mavros_msgs::PositionTarget::IGNORE_VY |
+            mavros_msgs::PositionTarget::IGNORE_VZ |
+            mavros_msgs::PositionTarget::IGNORE_AFX |
+            mavros_msgs::PositionTarget::IGNORE_AFY |
+            mavros_msgs::PositionTarget::IGNORE_AFZ |
+            mavros_msgs::PositionTarget::FORCE |
+            mavros_msgs::PositionTarget::IGNORE_YAW;
+            // mavros_msgs::PositionTarget::IGNORE_YAW_RATE; 
+        target_pose.yaw_rate = 0.5;       
     }
-    void track_control::track_mode(geometry_msgs::Twist vel){
-        vel.angular.z = 0.0;
+    void track_control::track_mode(){
+        ROS_INFO("Track Mode...");
+        target_pose.type_mask = 
+            // mavros_msgs::PositionTarget::IGNORE_PX |
+            // mavros_msgs::PositionTarget::IGNORE_PY |
+            // mavros_msgs::PositionTarget::IGNORE_PZ |
+            mavros_msgs::PositionTarget::IGNORE_VX |
+            mavros_msgs::PositionTarget::IGNORE_VY |
+            mavros_msgs::PositionTarget::IGNORE_VZ |
+            mavros_msgs::PositionTarget::IGNORE_AFX |
+            mavros_msgs::PositionTarget::IGNORE_AFY |
+            mavros_msgs::PositionTarget::IGNORE_AFZ |
+            mavros_msgs::PositionTarget::FORCE |
+            mavros_msgs::PositionTarget::IGNORE_YAW |
+            mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+        target_pose.position.y = distance_ - 2;
+
     }
-    void track_control::track_process(geometry_msgs::Twist vel, geometry_msgs::PoseStamped target_pose){
+    void track_control::track_process(){
         if(distance_ > 0 && -0.1 <= delta_x_ && delta_x_ <= 0.1){
-            track_control::track_mode(vel);
-            target_pose.pose.position.x = distance_ - 2.0;
+            track_control::track_mode();
         }
         else{
-            track_control::observe_mode(vel);
-        }
-        target_pose_pub.publish(target_pose);    
+            track_control::observe_mode();
+        }    
     }
 }
